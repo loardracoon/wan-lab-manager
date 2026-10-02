@@ -1,0 +1,113 @@
+# =============================================================================
+# VyOS - configuration example (WAN lab router)
+# =============================================================================
+# Replace every ${PLACEHOLDER} below before loading this file. Example using
+# envsubst:  export ROUTER_HOSTNAME=RT-A ... ; envsubst < vyos.config.example > vyos.config
+#
+# Placeholders
+# -----------------------------------------------------------------------------
+# General
+#   ${ROUTER_HOSTNAME}     Router hostname                       e.g. RT-A
+#   ${VYOS_PASSWORD}       Password of the "vyos" user (hashed by VyOS on commit)
+#
+# Interfaces (addresses in CIDR notation, e.g. a.b.c.d/24)
+#   ${ETH0_MAC}..${ETH4_MAC}  Interface MAC addresses (hw-id; optional, may be removed)
+#   ${TRANSPORT_ADDR}      eth0 - transport/core segment address (BGP peering)
+#   ${LAN1_ADDR}           eth1 - LAN 1 gateway address
+#   ${LAN2_ADDR}           eth2 - LAN 2 gateway address
+#   ${LAN3_ADDR}           eth3 - LAN 3 gateway address
+#   ${MGMT_ADDR}           eth4 - management address (CIDR)
+#   ${MGMT_IP}             eth4 - management address (IP only, no mask)
+#   ${MGMT_NET}            Management network allowed to reach the API (CIDR)
+#   ${LOOPBACK_IP}         Loopback address (IP only, /32 is applied); also the BGP router-id
+#
+# BGP
+#   ${BGP_ASN}             Local AS number                       e.g. 65000
+#   ${BGP_PEER_ASN}        Remote AS number of the peers         e.g. 65000 (iBGP)
+#   ${BGP_PEER1_IP}        First BGP neighbor (on the transport segment)
+#   ${BGP_PEER2_IP}        Second BGP neighbor (on the transport segment)
+#   ${LAN1_NET}            LAN 1 network announced via BGP (CIDR)
+#   ${LAN2_NET}            LAN 2 network announced via BGP (CIDR)
+#   ${LAN3_NET}            LAN 3 network announced via BGP (CIDR)
+#
+# HTTPS API
+#   ${API_KEY_ID}          API key identifier                    e.g. lab-automation
+#   ${API_KEY}             API key secret (use a long random value)
+# =============================================================================
+
+set interfaces ethernet eth0 address '${TRANSPORT_ADDR}'
+set interfaces ethernet eth0 hw-id '${ETH0_MAC}'
+set interfaces ethernet eth0 offload gro
+set interfaces ethernet eth0 offload gso
+set interfaces ethernet eth0 offload sg
+set interfaces ethernet eth0 offload tso
+set interfaces ethernet eth1 address '${LAN1_ADDR}'
+set interfaces ethernet eth1 hw-id '${ETH1_MAC}'
+set interfaces ethernet eth1 offload gro
+set interfaces ethernet eth1 offload gso
+set interfaces ethernet eth1 offload sg
+set interfaces ethernet eth1 offload tso
+set interfaces ethernet eth2 address '${LAN2_ADDR}'
+set interfaces ethernet eth2 hw-id '${ETH2_MAC}'
+set interfaces ethernet eth2 offload gro
+set interfaces ethernet eth2 offload gso
+set interfaces ethernet eth2 offload sg
+set interfaces ethernet eth2 offload tso
+set interfaces ethernet eth3 address '${LAN3_ADDR}'
+set interfaces ethernet eth3 hw-id '${ETH3_MAC}'
+set interfaces ethernet eth3 offload gro
+set interfaces ethernet eth3 offload gso
+set interfaces ethernet eth3 offload sg
+set interfaces ethernet eth3 offload tso
+set interfaces ethernet eth4 address '${MGMT_ADDR}'
+set interfaces ethernet eth4 hw-id '${ETH4_MAC}'
+set interfaces loopback lo address '${LOOPBACK_IP}/32'
+set protocols bgp address-family ipv4-unicast network ${LAN1_NET}
+set protocols bgp address-family ipv4-unicast network ${LAN2_NET}
+set protocols bgp address-family ipv4-unicast network ${LAN3_NET}
+set protocols bgp neighbor ${BGP_PEER1_IP} address-family ipv4-unicast nexthop-self
+set protocols bgp neighbor ${BGP_PEER1_IP} remote-as '${BGP_PEER_ASN}'
+set protocols bgp neighbor ${BGP_PEER1_IP} update-source 'eth0'
+set protocols bgp neighbor ${BGP_PEER2_IP} address-family ipv4-unicast nexthop-self
+set protocols bgp neighbor ${BGP_PEER2_IP} remote-as '${BGP_PEER_ASN}'
+set protocols bgp neighbor ${BGP_PEER2_IP} update-source 'eth0'
+set protocols bgp parameters router-id '${LOOPBACK_IP}'
+set protocols bgp system-as '${BGP_ASN}'
+set qos interface eth2 egress 'OK'
+set qos policy network-emulator Jitter bandwidth '1000mbit'
+set qos policy network-emulator Jitter delay '60'
+set qos policy network-emulator Jitter loss '0'
+set qos policy network-emulator Jitter reordering '30'
+set qos policy network-emulator Latency bandwidth '1000mbit'
+set qos policy network-emulator Latency delay '250'
+set qos policy network-emulator Latency loss '0'
+set qos policy network-emulator OK bandwidth '1000mbit'
+set qos policy network-emulator OK delay '2'
+set qos policy network-emulator OK loss '0'
+set qos policy network-emulator PacketLoss bandwidth '1000mbit'
+set qos policy network-emulator PacketLoss delay '10'
+set qos policy network-emulator PacketLoss loss '8'
+set service https allow-client address '${MGMT_NET}'
+set service https api keys id ${API_KEY_ID} key '${API_KEY}'
+set service https api rest
+set service https listen-address '${MGMT_IP}'
+set service ntp allow-client address '127.0.0.0/8'
+set service ntp allow-client address '169.254.0.0/16'
+set service ntp allow-client address '10.0.0.0/8'
+set service ntp allow-client address '172.16.0.0/12'
+set service ntp allow-client address '192.168.0.0/16'
+set service ntp allow-client address '::1/128'
+set service ntp allow-client address 'fe80::/10'
+set service ntp allow-client address 'fc00::/7'
+set service ntp server time1.vyos.net
+set service ntp server time2.vyos.net
+set service ntp server time3.vyos.net
+set service ssh listen-address '${MGMT_IP}'
+set service ssh port '22'
+set system config-management commit-revisions '100'
+set system console device ttyS0 speed '115200'
+set system host-name '${ROUTER_HOSTNAME}'
+set system login user vyos authentication plaintext-password '${VYOS_PASSWORD}'
+set system option reboot-on-upgrade-failure '5'
+set system syslog local facility all level 'info'
+set system syslog local facility local7 level 'debug'
