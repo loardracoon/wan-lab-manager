@@ -43,6 +43,14 @@
     display: inline-flex; align-items: center; gap: 7px;
     font-family: var(--mono); font-size: 11px; color: var(--text-dim); padding-right: 4px;
   }
+  .presence {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--warn);
+    background: rgba(255,194,51,.1); border: 1px solid rgba(255,194,51,.45); border-radius: 8px;
+    padding: 6px 10px; cursor: help;
+  }
+  .presence[hidden] { display: none; }
+  .presence svg { width: 15px; height: 15px; flex: none; }
   .hdr-actions button {
     font-family: var(--sans); font-size: 12.5px; font-weight: 500; color: var(--text);
     background: rgba(17,28,49,.85); border: 1px solid var(--line); border-radius: 8px;
@@ -268,6 +276,13 @@
     <span><i class="dot" style="background:var(--down)"></i>disabled</span>
   </div>
   <div class="hdr-actions">
+    <span class="presence" id="presence" role="status" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span id="presence-text">2 users online</span>
+    </span>
     <span class="sync"><i class="dot" id="sync-dot" style="background:#3a4c6e"></i><span id="sync-text">server · waiting</span></span>
     <button id="btn-test">Test environment</button>
     <button id="btn-history">History</button>
@@ -1197,6 +1212,31 @@
   // ---------------------------------------------------------------
   const syncDot = document.getElementById("sync-dot");
   const syncText = document.getElementById("sync-text");
+  const presenceEl = document.getElementById("presence");
+  const presenceText = document.getElementById("presence-text");
+
+  // One id per browser (shared by its tabs), so the server can count
+  // how many consoles are open at the same time.
+  const clientId = (() => {
+    const fresh = () => [...crypto.getRandomValues(new Uint8Array(12))]
+      .map(b => b.toString(16).padStart(2, "0")).join("");
+    try {
+      let id = localStorage.getItem("wanlab-client-id");
+      if (!id) { id = fresh(); localStorage.setItem("wanlab-client-id", id); }
+      return id;
+    } catch (_) {
+      return fresh();
+    }
+  })();
+
+  function setPresence(viewers) {
+    const others = (viewers || 1) - 1;
+    presenceEl.hidden = others < 1;
+    if (others < 1) return;
+    presenceText.textContent = `${viewers} users online`;
+    presenceEl.title = `${others} other ${others === 1 ? "person has" : "people have"} this console open. ` +
+      "Coordinate before applying link changes or importing a topology to avoid collisions.";
+  }
 
   function setSync(state, extra) {
     const map = {
@@ -1215,11 +1255,13 @@
     if (!topo) return;
     let st;
     try {
-      st = await api("/api/state");
+      st = await api("/api/state", { headers: { "X-Client-Id": clientId } });
     } catch (_) {
       setSync("offline");
+      presenceEl.hidden = true;
       return;
     }
+    setPresence(st.viewers);
     for (const link of links) {
       const ls = st.links?.[link.data.id];
       if (ls) syncLinkState(link, !!ls.disabled, ls.egress || null);

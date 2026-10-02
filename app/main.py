@@ -6,6 +6,7 @@ keeps a background poller that reconciles router state.
 """
 import json
 import os
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import Body, Depends, FastAPI, Header, HTTPException
@@ -94,9 +95,26 @@ async def restore_history(name: str):
 # ---------------------------------------------------------------------------
 # Live state / actions
 # ---------------------------------------------------------------------------
+# Presence: every browser polls /api/state with its own X-Client-Id, so the
+# ids seen within PRESENCE_TTL seconds are the consoles currently open.
+# In-memory on purpose: the deployment runs a single replica.
+PRESENCE_TTL = 20
+_presence: dict[str, float] = {}
+
+
+def _active_viewers(client_id: str) -> int:
+    now = time.monotonic()
+    if client_id:
+        _presence[client_id[:64]] = now
+    for cid, seen in list(_presence.items()):
+        if now - seen > PRESENCE_TTL:
+            del _presence[cid]
+    return len(_presence)
+
+
 @app.get("/api/state")
-async def get_state():
-    return poller.state
+async def get_state(x_client_id: str = Header(default="")):
+    return {**poller.state, "viewers": _active_viewers(x_client_id)}
 
 
 class ApplyBody(BaseModel):
