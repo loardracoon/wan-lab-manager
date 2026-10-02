@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wan-lab-manager
+  labels: { app: wan-lab-manager }
+spec:
+  # Single instance: topology is a file on the PVC and the poller must not run twice
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: { app: wan-lab-manager }
+  template:
+    metadata:
+      labels: { app: wan-lab-manager }
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      securityContext:
+        fsGroup: 10001
+      containers:
+        - name: app
+          image: ghcr.io/loardracoon/wan-lab-manager
+          ports:
+            - containerPort: 8080
+          env:
+            - name: HISTORY_KEEP
+              value: "20"
+            - name: VYOS_TIMEOUT
+              value: "10"
+          # Optional: API_TOKEN from a secret created out of band
+          envFrom:
+            - secretRef:
+                name: wan-lab-secrets
+                optional: true
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { memory: 256Mi }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: wan-lab-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wan-lab-manager
+spec:
+  selector: { app: wan-lab-manager }
+  ports:
+    - port: 8080
+      targetPort: 8080

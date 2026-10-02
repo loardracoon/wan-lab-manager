@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: wan-lab
+
+resources:
+  - namespace.yaml
+  - pvc.yaml
+  - app.yaml
+  - webssh.yaml
+  - ingress.yaml
+
+# newTag is rewritten by .github/workflows/deploy.yml on every build
+images:
+  - name: ghcr.io/loardracoon/wan-lab-manager
+    newTag: latest
+  - name: ghcr.io/loardracoon/wan-lab-manager-webssh
+    newTag: latest

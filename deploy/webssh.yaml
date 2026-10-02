@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webssh
+  labels: { app: webssh }
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate   # hostPort can only be bound by one pod per node
+  selector:
+    matchLabels: { app: webssh }
+  template:
+    metadata:
+      labels: { app: webssh }
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: webssh
+          image: ghcr.io/loardracoon/wan-lab-manager-webssh
+          ports:
+            # Exposed on <node>:8888 so the default sshGateway.urlTemplate
+            # (http://{origin-host}:8888/...) keeps working unchanged
+            - containerPort: 8888
+              hostPort: 8888
+          resources:
+            requests: { cpu: 20m, memory: 64Mi }
+            limits: { memory: 192Mi }
+---
+# In-cluster name used by the environment test (http://webssh:8888)
+apiVersion: v1
+kind: Service
+metadata:
+  name: webssh
+spec:
+  selector: { app: webssh }
+  ports:
+    - port: 8888
+      targetPort: 8888

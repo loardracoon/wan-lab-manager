@@ -1,0 +1,20 @@
+# Argo CD application: keeps the wan-lab namespace in sync with deploy/ on main.
+# Apply once with: kubectl apply -n argocd -f argocd/application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wan-lab-manager
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:loardracoon/wan-lab-manager.git
+    targetRevision: main
+    path: deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: wan-lab
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
