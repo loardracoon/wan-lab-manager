@@ -14,8 +14,6 @@ spec:
     metadata:
       labels: { app: wan-lab-manager }
     spec:
-      imagePullSecrets:
-        - name: ghcr-pull
       securityContext:
         fsGroup: 10001
       containers:

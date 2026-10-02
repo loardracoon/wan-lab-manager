@@ -13,8 +13,6 @@ spec:
     metadata:
       labels: { app: webssh }
     spec:
-      imagePullSecrets:
-        - name: ghcr-pull
       containers:
         - name: webssh
           image: ghcr.io/loardracoon/wan-lab-manager-webssh

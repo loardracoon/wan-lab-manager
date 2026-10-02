@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: git@github.com:loardracoon/wan-lab-manager.git
+    repoURL: https://github.com/loardracoon/wan-lab-manager.git
     targetRevision: main
     path: deploy
   destination:
