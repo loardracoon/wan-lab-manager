@@ -12,6 +12,6 @@ resources:
 # newTag is rewritten by .github/workflows/deploy.yml on every build
 images:
   - name: ghcr.io/loardracoon/wan-lab-manager
-    newTag: latest
+    newTag: aa5dc97e908ef6e75858ef8268881a49e97e4fb9
   - name: ghcr.io/loardracoon/wan-lab-manager-webssh
-    newTag: latest
+    newTag: aa5dc97e908ef6e75858ef8268881a49e97e4fb9
