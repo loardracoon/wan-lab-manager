@@ -38,7 +38,7 @@ async def call(router: dict, endpoint: str, payload: Any) -> Any:
         res = await client().post(
             url, data={"data": json.dumps(payload), "key": router.get("apiKey", "")}
         )
-    except httpx.HTTPError as exc:
+    except (httpx.HTTPError, httpx.InvalidURL) as exc:
         raise VyOSError(f"unreachable ({exc.__class__.__name__}: {exc})") from exc
     try:
         body = res.json()

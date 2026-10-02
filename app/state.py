@@ -170,7 +170,7 @@ class Poller:
                     try:
                         res = await probe.get(url)
                         lines.append({"level": "ok", "text": f"✓ WebAdmin {host} reachable (HTTP {res.status_code})"})
-                    except httpx.HTTPError as exc:
+                    except (httpx.HTTPError, httpx.InvalidURL) as exc:
                         lines.append({"level": "warn",
                                       "text": f"⚠ WebAdmin {host} did not respond ({url}): {exc.__class__.__name__}"})
 
@@ -180,7 +180,7 @@ class Poller:
                     try:
                         await probe.get(origin)
                         lines.append({"level": "ok", "text": f"✓ SSH gateway reachable ({origin})"})
-                    except httpx.HTTPError:
+                    except (httpx.HTTPError, httpx.InvalidURL):
                         lines.append({"level": "warn", "text": "⚠ SSH gateway did not respond — the SSH console tab will not load."})
                 else:
                     lines.append({"level": "info", "text": "· SSH gateway not configured (sshGateway.urlTemplate is empty)."})
