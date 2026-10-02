@@ -108,25 +108,25 @@ class Poller:
         async with self.busy:
             ops: list[dict] = []
             if enabled:
-                lines.append({"level": "info", "text": f"→ {router['name']}: verificando estado de {qif}…"})
+                lines.append({"level": "info", "text": f"→ {router['name']}: checking state of {qif}…"})
                 if await vyos.exists(router, [*ifp, "disable"]):
                     ops.append({"op": "delete", "path": [*ifp, "disable"]})
             else:
                 ops.append({"op": "set", "path": [*ifp, "disable"]})
             ops.append({"op": "set", "path": ["qos", "interface", qif, "egress", profile]})
 
-            lines.append({"level": "info", "text": f"→ {router['name']}: perfil \"{profile}\" em {qif} + commit…"})
+            lines.append({"level": "info", "text": f"→ {router['name']}: profile \"{profile}\" on {qif} + commit…"})
             await vyos.configure(router, ops)
-            lines.append({"level": "ok", "text": "✓ commit concluído"})
+            lines.append({"level": "ok", "text": "✓ commit completed"})
 
             if persist:
                 await vyos.save_config(router)
-                lines.append({"level": "ok", "text": "✓ configuração salva no disco do roteador"})
+                lines.append({"level": "ok", "text": "✓ configuration saved to the router disk"})
 
         # Reflect immediately in the cached state
         self.state.setdefault("links", {})[link["id"]] = {"disabled": not enabled, "egress": profile}
         self.state["updatedAt"] = dt.datetime.now().isoformat(timespec="seconds")
-        lines.append({"level": "ok", "text": f"✓ link {'ativo' if enabled else 'desativado'}"})
+        lines.append({"level": "ok", "text": f"✓ link {'enabled' if enabled else 'disabled'}"})
         return lines
 
     # ------------------------------------------------------------------
@@ -143,23 +143,23 @@ class Poller:
                 lines.append({"level": "info", "text": f"— {router['name']} ({router['apiUrl']})"})
                 try:
                     await vyos.exists(router, ["system"])
-                    lines.append({"level": "ok", "text": "  ✓ API HTTPS respondendo e chave aceita"})
+                    lines.append({"level": "ok", "text": "  ✓ HTTPS API responding and key accepted"})
                 except vyos.VyOSError as exc:
-                    lines.append({"level": "err", "text": f"  ✗ API inacessível: {exc}"})
-                    lines.append({"level": "err", "text": "    Verifique 'set service https api' e a chave em vyos.routers."})
+                    lines.append({"level": "err", "text": f"  ✗ API unreachable: {exc}"})
+                    lines.append({"level": "err", "text": "    Check 'set service https api' and the key in vyos.routers."})
                     continue
                 for key, prof in profiles.items():
                     try:
                         if await vyos.exists(router, ["qos", "policy", "network-emulator", key]):
-                            lines.append({"level": "ok", "text": f"  ✓ perfil \"{key}\" presente"})
+                            lines.append({"level": "ok", "text": f"  ✓ profile \"{key}\" present"})
                         else:
-                            lines.append({"level": "warn", "text": f"  … perfil \"{key}\" ausente — criando"})
+                            lines.append({"level": "warn", "text": f"  … profile \"{key}\" missing — creating"})
                             await vyos.configure(router, vyos.profile_ops(key, prof))
                             lines.append({"level": "ok",
-                                          "text": f"  ✓ perfil \"{key}\" criado "
+                                          "text": f"  ✓ profile \"{key}\" created "
                                                   f"({prof.get('delayMs', 0)}ms · {prof.get('lossPct', 0)}% loss)"})
                     except vyos.VyOSError as exc:
-                        lines.append({"level": "err", "text": f"  ✗ perfil \"{key}\": {exc}"})
+                        lines.append({"level": "err", "text": f"  ✗ profile \"{key}\": {exc}"})
 
             async with httpx.AsyncClient(verify=False, timeout=config.PROBE_TIMEOUT) as probe:
                 for site in topo.get("sites", []):
@@ -169,23 +169,23 @@ class Poller:
                     host = (site.get("firewall") or {}).get("hostname", site["id"])
                     try:
                         res = await probe.get(url)
-                        lines.append({"level": "ok", "text": f"✓ WebAdmin {host} alcançável (HTTP {res.status_code})"})
+                        lines.append({"level": "ok", "text": f"✓ WebAdmin {host} reachable (HTTP {res.status_code})"})
                     except httpx.HTTPError as exc:
                         lines.append({"level": "warn",
-                                      "text": f"⚠ WebAdmin {host} não respondeu ({url}): {exc.__class__.__name__}"})
+                                      "text": f"⚠ WebAdmin {host} did not respond ({url}): {exc.__class__.__name__}"})
 
                 tpl = (topo.get("sshGateway") or {}).get("urlTemplate", "")
                 if tpl:
                     origin = tpl.split("?")[0].replace("{origin-host}", "webssh")
                     try:
                         await probe.get(origin)
-                        lines.append({"level": "ok", "text": f"✓ Gateway SSH alcançável ({origin})"})
+                        lines.append({"level": "ok", "text": f"✓ SSH gateway reachable ({origin})"})
                     except httpx.HTTPError:
-                        lines.append({"level": "warn", "text": "⚠ Gateway SSH não respondeu — a aba Console SSH não vai carregar."})
+                        lines.append({"level": "warn", "text": "⚠ SSH gateway did not respond — the SSH console tab will not load."})
                 else:
-                    lines.append({"level": "info", "text": "· Gateway SSH não configurado (sshGateway.urlTemplate vazio)."})
+                    lines.append({"level": "info", "text": "· SSH gateway not configured (sshGateway.urlTemplate is empty)."})
 
-        lines.append({"level": "info", "text": "— teste concluído"})
+        lines.append({"level": "info", "text": "— test completed"})
         return lines
 
 

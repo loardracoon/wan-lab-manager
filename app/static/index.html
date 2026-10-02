@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -264,15 +264,15 @@
   <div class="legend">
     <span><i class="dot" id="legend-isp-a" style="background:#4fc3f7"></i><em id="legend-isp-a-name" style="font-style:normal">ISP-1</em></span>
     <span><i class="dot" id="legend-isp-b" style="background:#34d399"></i><em id="legend-isp-b-name" style="font-style:normal">ISP-2</em></span>
-    <span><i class="dot" style="background:var(--warn)"></i>perfil ativo</span>
-    <span><i class="dot" style="background:var(--down)"></i>desativado</span>
+    <span><i class="dot" style="background:var(--warn)"></i>profile active</span>
+    <span><i class="dot" style="background:var(--down)"></i>disabled</span>
   </div>
   <div class="hdr-actions">
-    <span class="sync"><i class="dot" id="sync-dot" style="background:#3a4c6e"></i><span id="sync-text">servidor · aguardando</span></span>
-    <button id="btn-test">Testar ambiente</button>
-    <button id="btn-history">Histórico</button>
-    <button id="btn-load">Importar JSON</button>
-    <button id="btn-export">Exportar</button>
+    <span class="sync"><i class="dot" id="sync-dot" style="background:#3a4c6e"></i><span id="sync-text">server · waiting</span></span>
+    <button id="btn-test">Test environment</button>
+    <button id="btn-history">History</button>
+    <button id="btn-load">Import JSON</button>
+    <button id="btn-export">Export</button>
     <input type="file" id="file-input" accept=".json,application/json" hidden>
   </div>
 </header>
@@ -289,8 +289,8 @@
       <div class="drawer-url" id="drawer-url">—</div>
     </div>
     <div class="drawer-actions">
-      <a class="btn" id="drawer-newtab" href="#" target="_blank" rel="noopener">Abrir em nova aba ↗</a>
-      <button id="drawer-close" aria-label="Fechar painel">Fechar ✕</button>
+      <a class="btn" id="drawer-newtab" href="#" target="_blank" rel="noopener">Open in new tab ↗</a>
+      <button id="drawer-close" aria-label="Close panel">Close ✕</button>
     </div>
   </div>
 
@@ -300,28 +300,28 @@
   </div>
 
   <div class="pane active" id="pane-web">
-    <iframe id="web-iframe" title="Interface de gestão do firewall" src="about:blank"></iframe>
+    <iframe id="web-iframe" title="Firewall management interface" src="about:blank"></iframe>
     <div class="iframe-note">
-      Se a página não carregar aqui, o firewall pode estar bloqueando iframes
-      (X-Frame-Options) ou usando certificado autoassinado — use “Abrir em nova aba”.
+      If the page does not load here, the firewall may be blocking iframes
+      (X-Frame-Options) or using a self-signed certificate — use “Open in new tab”.
     </div>
   </div>
 
   <div class="pane" id="pane-ssh">
-    <iframe id="ssh-iframe" title="Console SSH do firewall" src="about:blank"></iframe>
+    <iframe id="ssh-iframe" title="Firewall SSH console" src="about:blank"></iframe>
     <div id="ssh-help">
-      <h2>Console SSH via gateway web</h2>
+      <h2>SSH console via web gateway</h2>
       <p>
-        O docker-compose deste projeto já sobe um serviço <code>webssh</code> na porta 8888.
-        Se esta mensagem aparece, o campo <code>sshGateway.urlTemplate</code> da topologia
-        está vazio ou o serviço não está no ar. O template padrão é:
+        This project's docker-compose already starts a <code>webssh</code> service on port 8888.
+        If you see this message, the topology field <code>sshGateway.urlTemplate</code>
+        is empty or the service is not running. The default template is:
       </p>
       <pre>"sshGateway": {
   "urlTemplate": "http://{origin-host}:8888/?hostname={host}&amp;username={user}&amp;port={port}"
 }</pre>
       <p>
-        <code>{origin-host}</code> é trocado pelo host que você usa para acessar esta página;
-        <code>{host}</code>, <code>{user}</code> e <code>{port}</code> vêm de cada firewall
+        <code>{origin-host}</code> is replaced by the host you use to reach this page;
+        <code>{host}</code>, <code>{user}</code> and <code>{port}</code> come from each firewall
         (<code>sshHost</code>, <code>sshUser</code>, <code>sshPort</code>).
       </p>
     </div>
@@ -334,19 +334,19 @@
       <div class="lp-title" id="lp-title">—</div>
       <div class="lp-sub" id="lp-sub">—</div>
     </div>
-    <button id="lp-close" aria-label="Fechar painel do link">✕</button>
+    <button id="lp-close" aria-label="Close link panel">✕</button>
   </div>
   <div class="lp-body">
     <div class="lp-toggle-row">
-      <span>Link ativo</span>
+      <span>Link enabled</span>
       <label class="switch"><input type="checkbox" id="lp-enabled"><i></i></label>
     </div>
     <div class="lp-field">
-      <label>Perfil de qualidade do link</label>
+      <label>Link quality profile</label>
       <div class="lp-profiles" id="lp-profiles"></div>
     </div>
-    <label class="lp-save"><input type="checkbox" id="lp-persist"> Salvar configuração no VyOS após aplicar</label>
-    <button class="lp-apply" id="lp-apply">Aplicar no VyOS</button>
+    <label class="lp-save"><input type="checkbox" id="lp-persist"> Save configuration on VyOS after applying</label>
+    <button class="lp-apply" id="lp-apply">Apply on VyOS</button>
     <div class="lp-target" id="lp-target">—</div>
     <pre class="lp-log" id="lp-log"></pre>
   </div>
@@ -354,16 +354,16 @@
 
 <aside id="testpanel" aria-hidden="true">
   <div class="tp-head">
-    <span>Teste do ambiente</span>
-    <button id="tp-close" aria-label="Fechar teste">✕</button>
+    <span>Environment test</span>
+    <button id="tp-close" aria-label="Close test">✕</button>
   </div>
   <pre class="tp-log" id="tp-log"></pre>
 </aside>
 
 <aside id="historypanel" aria-hidden="true">
   <div class="tp-head">
-    <span>Histórico de configurações</span>
-    <button id="hp-close" aria-label="Fechar histórico">✕</button>
+    <span>Configuration history</span>
+    <button id="hp-close" aria-label="Close history">✕</button>
   </div>
   <div class="hp-list" id="hp-list"></div>
 </aside>
@@ -401,7 +401,7 @@
     if (authToken) headers["X-Auth-Token"] = authToken;
     const res = await fetch(path, { ...opts, headers });
     if (res.status === 401 && !opts._retried) {
-      const t = window.prompt("Este servidor exige token (API_TOKEN). Informe o token:");
+      const t = window.prompt("This server requires a token (API_TOKEN). Enter the token:");
       if (t) { authToken = t; return api(path, { ...opts, _retried: true }); }
     }
     const body = await res.json().catch(() => null);
@@ -410,9 +410,9 @@
   }
 
   function validateTopology(data) {
-    if (!data || typeof data !== "object") throw new Error("JSON raiz inválido");
+    if (!data || typeof data !== "object") throw new Error("invalid JSON root");
     for (const k of ["isps", "sites", "links"]) {
-      if (!Array.isArray(data[k])) throw new Error(`campo "${k}" ausente ou não é uma lista`);
+      if (!Array.isArray(data[k])) throw new Error(`field "${k}" is missing or is not a list`);
     }
     return data;
   }
@@ -892,10 +892,10 @@
   }
 
   function fmtMbps(v) {
-    return v >= 1000 ? (v / 1000).toFixed(1).replace(".", ",") + " Gbps" : v + " Mbps";
+    return v >= 1000 ? (v / 1000).toFixed(1) + " Gbps" : v + " Mbps";
   }
 
-  const STATUS_PT = { up: "operacional", degraded: "perfil ativo", down: "desativado" };
+  const STATUS_LABEL = { up: "operational", degraded: "profile active", down: "disabled" };
 
   function showLinkTooltip(link, x, y) {
     const s = link.data.stats;
@@ -903,17 +903,17 @@
     const statusColor = s.status === "up" ? COLORS.ok : s.status === "degraded" ? COLORS.warn : COLORS.down;
     tooltip.innerHTML = `
       <div class="tt-title">${link.from.data.name} → ${link.to.data.name}</div>
-      <div class="tt-sub">circuito ${link.data.circuit}</div>
+      <div class="tt-sub">circuit ${link.data.circuit}</div>
       <div class="row"><span>Status</span>
-        <b class="status"><i class="dot" style="background:${statusColor}"></i>${STATUS_PT[s.status] || s.status}</b></div>
-      <div class="row"><span>Perfil</span><b>${s.profile || "—"}</b></div>
-      <div class="row"><span>Banda contratada</span><b>${fmtMbps(s.bandwidthMbps)}</b></div>
-      <div class="row"><span>Utilização</span><b>${s.usagePct}%</b></div>
+        <b class="status"><i class="dot" style="background:${statusColor}"></i>${STATUS_LABEL[s.status] || s.status}</b></div>
+      <div class="row"><span>Profile</span><b>${s.profile || "—"}</b></div>
+      <div class="row"><span>Contracted bandwidth</span><b>${fmtMbps(s.bandwidthMbps)}</b></div>
+      <div class="row"><span>Utilization</span><b>${s.usagePct}%</b></div>
       <div class="bar"><i style="width:${Math.min(100, s.usagePct)}%;background:${color}"></i></div>
-      <div class="row" style="margin-top:6px"><span>Latência</span><b>${s.latencyMs} ms</b></div>
+      <div class="row" style="margin-top:6px"><span>Latency</span><b>${s.latencyMs} ms</b></div>
       <div class="row"><span>Jitter</span><b>${s.jitterMs} ms</b></div>
-      <div class="row"><span>Perda de pacotes</span><b>${s.lossPct}%</b></div>
-      <div class="hint">Clique para trocar o perfil ou desativar o link</div>`;
+      <div class="row"><span>Packet loss</span><b>${s.lossPct}%</b></div>
+      <div class="hint">Click to change the profile or disable the link</div>`;
     positionTooltip(x, y);
   }
 
@@ -923,14 +923,14 @@
       tooltip.innerHTML = `
         <div class="tt-title">${node.data.name}</div>
         <div class="tt-sub">${fw.hostname} · ${fw.model}</div>
-        <div class="row"><span>Gestão</span><b>${fw.mgmtUrl}</b></div>
+        <div class="row"><span>Management</span><b>${fw.mgmtUrl}</b></div>
         <div class="row"><span>SSH</span><b>${fw.sshUser || "admin"}@${fw.sshHost || "—"}</b></div>
-        <div class="hint">Clique para abrir WebAdmin e console SSH</div>`;
+        <div class="hint">Click to open WebAdmin and the SSH console</div>`;
     } else {
       tooltip.innerHTML = `
         <div class="tt-title">${node.data.name}</div>
         <div class="tt-sub">${node.data.asn}</div>
-        <div class="row"><span>Circuitos ativos</span>
+        <div class="row"><span>Active circuits</span>
           <b>${links.filter(l => l.data.from === node.data.id && l.data.stats.status !== "down").length} / ${links.filter(l => l.data.from === node.data.id).length}</b></div>`;
     }
     positionTooltip(x, y);
@@ -1077,11 +1077,11 @@
 
   function describeTarget(link) {
     const ctl = link.data.control;
-    if (!ctl) return "Sem controle VyOS configurado — adicione o campo \"control\" a este link na topologia.";
+    if (!ctl) return "No VyOS control configured — add a \"control\" field to this link in the topology.";
     const r = topo?.vyos?.routers?.[ctl.router];
-    if (!r) return `Roteador "${ctl.router}" não encontrado em vyos.routers.`;
+    if (!r) return `Router "${ctl.router}" not found in vyos.routers.`;
     const iface = ctl.vif != null ? `${ctl.interface}.${ctl.vif}` : ctl.interface;
-    return `${r.name} · ${iface} · egress → perfil selecionado\n${r.apiUrl} (via servidor)`;
+    return `${r.name} · ${iface} · egress → selected profile\n${r.apiUrl} (via server)`;
   }
 
   function renderProfileButtons() {
@@ -1090,7 +1090,7 @@
     const profiles = topo?.linkProfiles || {};
     const keys = Object.keys(profiles);
     if (!keys.length) {
-      wrap.innerHTML = `<div class="lp-target">Nenhum perfil em "linkProfiles" na topologia.</div>`;
+      wrap.innerHTML = `<div class="lp-target">No profiles in the topology "linkProfiles".</div>`;
       return;
     }
     for (const key of keys) {
@@ -1116,7 +1116,7 @@
     const s = link.data.stats;
     lpSelectedProfile = s.profile || defaultProfileKey();
     lpEl("lp-title").textContent = `${link.from.data.name} → ${link.to.data.name}`;
-    lpEl("lp-sub").textContent   = `circuito ${link.data.circuit}`;
+    lpEl("lp-sub").textContent   = `circuit ${link.data.circuit}`;
     lpEl("lp-enabled").checked   = s.status !== "down";
     renderProfileButtons();
     lpEl("lp-target").textContent = describeTarget(link);
@@ -1137,7 +1137,7 @@
     const link = selectedLink;
     lpEl("lp-log").textContent = "";
     const profileKey = lpSelectedProfile;
-    if (!profileKey) { lpLog("✗ Selecione um perfil."); return; }
+    if (!profileKey) { lpLog("✗ Select a profile."); return; }
     const enabled = lpEl("lp-enabled").checked;
     const persist = lpEl("lp-persist").checked;
 
@@ -1152,7 +1152,7 @@
       syncLinkState(link, !enabled, profileKey);
     } catch (err) {
       lpLog("✗ " + err.message);
-      lpLog("Se o perfil não existir no roteador, rode \"Testar ambiente\" para criá-lo.");
+      lpLog("If the profile does not exist on the router, run \"Test environment\" to create it.");
     } finally {
       btn.disabled = false;
     }
@@ -1178,7 +1178,7 @@
   async function runTests() {
     testPanel.classList.add("open");
     testLog.textContent = "";
-    tlog("Executando testes no servidor…");
+    tlog("Running tests on the server…");
     try {
       const r = await api("/api/test", { method: "POST" });
       testLog.textContent = "";
@@ -1200,11 +1200,11 @@
 
   function setSync(state, extra) {
     const map = {
-      idle:    ["#3a4c6e", "servidor · aguardando"],
-      ok:      [COLORS.ok, "VyOS · sincronizado " + (extra || "")],
-      partial: [COLORS.warn, "VyOS · parcial " + (extra || "")],
-      fail:    [COLORS.down, "VyOS · sem conexão"],
-      offline: [COLORS.down, "servidor · offline"]
+      idle:    ["#3a4c6e", "server · waiting"],
+      ok:      [COLORS.ok, "VyOS · synced " + (extra || "")],
+      partial: [COLORS.warn, "VyOS · partial " + (extra || "")],
+      fail:    [COLORS.down, "VyOS · no connection"],
+      offline: [COLORS.down, "server · offline"]
     };
     const [color, text] = map[state] || map.idle;
     syncDot.style.background = color;
@@ -1247,12 +1247,12 @@
         const parsed = JSON.parse(reader.result);
         const saved = await api("/api/topology", { method: "PUT", json: parsed });
         applyTopology(saved);
-        tlog(`✓ "${file.name}" importado e persistido no servidor: ` +
+        tlog(`✓ "${file.name}" imported and saved on the server: ` +
              `${saved.links.length} links, ${saved.sites.length} sites, ` +
-             `${Object.keys(saved.linkProfiles || {}).length} perfis`, "t-ok");
+             `${Object.keys(saved.linkProfiles || {}).length} profiles`, "t-ok");
         refreshState();
       } catch (err) {
-        tlog(`✗ Falha ao importar "${file.name}": ${err.message}`, "t-err");
+        tlog(`✗ Failed to import "${file.name}": ${err.message}`, "t-err");
       }
     };
     reader.readAsText(file);
@@ -1285,12 +1285,12 @@
 
   async function openHistory() {
     historyPanel.classList.add("open");
-    historyList.innerHTML = "carregando…";
+    historyList.innerHTML = "loading…";
     try {
       const items = await api("/api/topology/history");
       historyList.innerHTML = "";
       if (!items.length) {
-        historyList.innerHTML = '<div class="lp-target">Nenhum backup ainda — cada importação gera um.</div>';
+        historyList.innerHTML = '<div class="lp-target">No backups yet — each import creates one.</div>';
         return;
       }
       for (const it of items) {
@@ -1298,17 +1298,17 @@
         row.className = "hp-item";
         row.innerHTML = `<span><b>${it.name}</b><br>${it.modified} · ${(it.size / 1024).toFixed(1)} KB</span>`;
         const btn = document.createElement("button");
-        btn.textContent = "Restaurar";
+        btn.textContent = "Restore";
         btn.addEventListener("click", async () => {
           try {
             const data = await api(`/api/topology/restore/${encodeURIComponent(it.name)}`, { method: "POST" });
             applyTopology(data);
             historyPanel.classList.remove("open");
             testPanel.classList.add("open");
-            tlog(`✓ Backup ${it.name} restaurado`, "t-ok");
+            tlog(`✓ Backup ${it.name} restored`, "t-ok");
             refreshState();
           } catch (err) {
-            alert("Falha ao restaurar: " + err.message);
+            alert("Failed to restore: " + err.message);
           }
         });
         row.appendChild(btn);
@@ -1336,7 +1336,7 @@
     } catch (err) {
       document.body.insertAdjacentHTML("beforeend",
         `<div style="position:fixed;inset:0;display:grid;place-items:center;font-family:var(--mono)">
-           Falha ao carregar a topologia do servidor: ${err.message}</div>`);
+           Failed to load the topology from the server: ${err.message}</div>`);
     }
   })();
 })();

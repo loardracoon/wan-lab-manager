@@ -36,7 +36,7 @@ app = FastAPI(title="WAN Lab Manager", version="1.0.0", lifespan=lifespan)
 # ---------------------------------------------------------------------------
 def require_token(x_auth_token: str = Header(default="")):
     if config.API_TOKEN and x_auth_token != config.API_TOKEN:
-        raise HTTPException(status_code=401, detail="token inválido ou ausente (X-Auth-Token)")
+        raise HTTPException(status_code=401, detail="invalid or missing token (X-Auth-Token)")
 
 
 # ---------------------------------------------------------------------------
@@ -53,7 +53,7 @@ async def put_topology(data: dict = Body(...)):
     try:
         data = models.validate_topology(data)
     except (ValidationError, ValueError) as exc:
-        raise HTTPException(status_code=422, detail=f"topologia inválida: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f"invalid topology: {exc}") from exc
     await storage.save(data)
     poller.set_topology(data)
     return models.redact(data)
@@ -65,7 +65,7 @@ async def export_topology(include_secrets: bool = False,
     data = poller.topology
     if include_secrets:
         if config.API_TOKEN and x_auth_token != config.API_TOKEN:
-            raise HTTPException(status_code=401, detail="export com segredos exige X-Auth-Token")
+            raise HTTPException(status_code=401, detail="export with secrets requires X-Auth-Token")
     else:
         data = models.redact(data)
     body = json.dumps(data, ensure_ascii=False, indent=2)
@@ -86,7 +86,7 @@ async def restore_history(name: str):
     try:
         data = await storage.restore(name)
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="backup não encontrado") from exc
+        raise HTTPException(status_code=404, detail="backup not found") from exc
     poller.set_topology(data)
     return models.redact(data)
 
@@ -109,10 +109,10 @@ class ApplyBody(BaseModel):
 async def apply_link(link_id: str, body: ApplyBody):
     link = next((l for l in poller.topology.get("links", []) if l.get("id") == link_id), None)
     if not link:
-        raise HTTPException(status_code=404, detail=f"link '{link_id}' não encontrado")
+        raise HTTPException(status_code=404, detail=f"link '{link_id}' not found")
     profiles = poller.topology.get("linkProfiles", {}) or {}
     if body.profile not in profiles:
-        raise HTTPException(status_code=422, detail=f"perfil '{body.profile}' não existe em linkProfiles")
+        raise HTTPException(status_code=422, detail=f"profile '{body.profile}' does not exist in linkProfiles")
     try:
         lines = await poller.apply_link(link, body.enabled, body.profile, body.persist)
     except vyos.VyOSError as exc:
@@ -145,5 +145,5 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 @app.exception_handler(404)
 async def not_found(request, exc):
     if request.url.path.startswith("/api/"):
-        return JSONResponse({"detail": "não encontrado"}, status_code=404)
+        return JSONResponse({"detail": "not found"}, status_code=404)
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))

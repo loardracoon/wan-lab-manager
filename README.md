@@ -52,10 +52,10 @@ docker compose up -d --build
 
 First run seeds a default topology. Then:
 
-1. Open the UI, click **Importar JSON** ("Import JSON"; or drag & drop) to load your real
+1. Open the UI, click **Import JSON** (or drag & drop) to load your real
    topology — router API keys included. It is validated, persisted and
    backed up server-side.
-2. Click **Testar ambiente** ("Test environment"): validates each VyOS API (reachability + key),
+2. Click **Test environment**: validates each VyOS API (reachability + key),
    creates any missing link-quality profiles, and probes each Sophos WebAdmin
    and the SSH gateway.
 3. Click links to switch profiles or disable circuits; click firewalls for
@@ -201,7 +201,7 @@ listen addresses `10.255.255.2`, its own API key, and the optional static
 route `10.255.100.0/22 next-hop 10.255.255.1`.
 
 The link-quality profiles (`qos policy network-emulator ...`) do **not** need
-to be configured by hand: **Testar ambiente** creates any missing profile on
+to be configured by hand: **Test environment** creates any missing profile on
 every router. A complete router configuration template is available in
 [vyos.config.example](vyos.config.example).
 
@@ -242,7 +242,7 @@ Use the manager's link profiles to exercise the SD-WAN profiles: apply
 
 ### Matching topology file
 
-Import this file (**Importar JSON**) to drive the environment above. Replace
+Import this file (**Import JSON**) to drive the environment above. Replace
 the API keys with the ones configured on each router.
 
 ```json
