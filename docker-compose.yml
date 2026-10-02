@@ -1,0 +1,21 @@
+services:
+  app:
+    build: .
+    container_name: wan-lab-manager
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      # Uncomment to require a token on every mutating endpoint:
+      # - API_TOKEN=change-me
+      - HISTORY_KEEP=20
+      - VYOS_TIMEOUT=10
+    restart: unless-stopped
+
+  webssh:
+    build: ./webssh
+    container_name: wan-lab-webssh
+    ports:
+      - "8888:8888"
+    restart: unless-stopped

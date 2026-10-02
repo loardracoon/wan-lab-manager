@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WAN Lab Manager — 2 ISPs · 3 Sites · Sophos Firewall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1526;
+    --bg-raise: #111c31;
+    --line: #24344f;
+    --text: #dbe7f7;
+    --text-dim: #7d90ad;
+    --ok: #3ddc97;
+    --warn: #ffc233;
+    --down: #ff5c5c;
+    --accent: #2f81f7;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); overflow: hidden; }
+
+  header {
+    position: fixed; top: 0; left: 0; right: 0; height: 60px;
+    display: flex; align-items: center; gap: 16px; padding: 0 20px;
+    background: linear-gradient(180deg, rgba(13,21,38,.96), rgba(13,21,38,.78) 80%, transparent);
+    z-index: 10; pointer-events: none;
+  }
+  header h1 { font-size: 15px; font-weight: 700; letter-spacing: .04em; }
+  header .sub { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+  .legend {
+    display: flex; gap: 13px; margin-left: 10px;
+    font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .hdr-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; pointer-events: auto; }
+  .sync {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--mono); font-size: 11px; color: var(--text-dim); padding-right: 4px;
+  }
+  .hdr-actions button {
+    font-family: var(--sans); font-size: 12.5px; font-weight: 500; color: var(--text);
+    background: rgba(17,28,49,.85); border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 12px; cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .hdr-actions button:hover { border-color: var(--accent); background: rgba(47,129,247,.1); }
+
+  #stage { position: fixed; inset: 0; cursor: default; display: block; }
+  #stage.pointer { cursor: pointer; }
+
+  #tooltip {
+    position: fixed; min-width: 230px; max-width: 290px;
+    background: var(--bg-raise); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 14px; font-family: var(--mono); font-size: 12px; line-height: 1.55;
+    box-shadow: 0 12px 32px rgba(0,0,0,.45);
+    pointer-events: none; opacity: 0; transform: translateY(4px);
+    transition: opacity .12s ease, transform .12s ease; z-index: 20;
+  }
+  #tooltip.visible { opacity: 1; transform: translateY(0); }
+  #tooltip .tt-title { font-family: var(--sans); font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+  #tooltip .tt-sub { color: var(--text-dim); font-size: 11px; margin-bottom: 8px; }
+  #tooltip .row { display: flex; justify-content: space-between; gap: 12px; }
+  #tooltip .row b { font-weight: 600; }
+  #tooltip .bar { margin-top: 6px; height: 5px; border-radius: 3px; background: #1b2a44; overflow: hidden; }
+  #tooltip .bar i { display: block; height: 100%; border-radius: 3px; }
+  #tooltip .status { display: inline-flex; align-items: center; gap: 6px; }
+  #tooltip .hint {
+    margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line);
+    color: var(--text-dim); font-size: 10.5px;
+  }
+
+  #overlay {
+    position: fixed; inset: 0; background: rgba(5,9,18,.55);
+    opacity: 0; pointer-events: none; transition: opacity .25s ease; z-index: 30;
+  }
+  #overlay.open { opacity: 1; pointer-events: auto; }
+
+  #drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 65vw;
+    background: var(--bg-raise); border-left: 1px solid var(--line);
+    transform: translateX(102%); transition: transform .3s cubic-bezier(.32,.72,.28,1);
+    z-index: 40; display: flex; flex-direction: column;
+    box-shadow: -24px 0 60px rgba(0,0,0,.5);
+  }
+  #drawer.open { transform: translateX(0); }
+  #drawer .drawer-head {
+    display: flex; align-items: center; gap: 14px; padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  #drawer .fw-badge {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: linear-gradient(145deg, #1258b3, #0a3d80);
+    display: grid; place-items: center;
+    font-family: var(--mono); font-size: 10px; font-weight: 600; color: #cfe6ff; flex: 0 0 auto;
+  }
+  #drawer .drawer-title { font-size: 15px; font-weight: 700; }
+  #drawer .drawer-url { font-family: var(--mono); font-size: 11px; color: var(--text-dim); word-break: break-all; }
+  #drawer .drawer-actions { margin-left: auto; display: flex; gap: 8px; }
+  #drawer button, #drawer a.btn {
+    font-family: var(--sans); font-size: 12.5px; font-weight: 500; color: var(--text);
+    background: transparent; border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 12px; cursor: pointer; text-decoration: none;
+    transition: border-color .15s, background .15s;
+  }
+  #drawer button:hover, #drawer a.btn:hover { border-color: var(--accent); background: rgba(47,129,247,.08); }
+
+  .tabbar { display: flex; gap: 4px; padding: 8px 18px 0; border-bottom: 1px solid var(--line); }
+  .tab-btn {
+    font-family: var(--sans); font-size: 12.5px; font-weight: 500;
+    color: var(--text-dim); background: transparent; border: 0; cursor: pointer;
+    padding: 8px 14px 10px; border-bottom: 2px solid transparent;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+
+  #drawer .pane { position: relative; flex: 1; background: #0a1120; display: none; }
+  #drawer .pane.active { display: block; }
+  #drawer iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
+  #pane-ssh iframe { background: #000; }
+  #drawer .iframe-note {
+    position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+    background: rgba(13,21,38,.92); border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 14px; font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+    max-width: 90%; text-align: center;
+  }
+
+  #ssh-help {
+    position: absolute; inset: 0; overflow: auto; padding: 32px 40px;
+    font-size: 13.5px; line-height: 1.7; display: none;
+  }
+  #ssh-help.visible { display: block; }
+  #ssh-help h2 { font-size: 16px; margin-bottom: 10px; }
+  #ssh-help p { color: var(--text-dim); margin-bottom: 14px; max-width: 70ch; }
+  #ssh-help code, #ssh-help pre {
+    font-family: var(--mono); font-size: 12px;
+    background: #0d1526; border: 1px solid var(--line); border-radius: 6px;
+  }
+  #ssh-help code { padding: 2px 6px; }
+  #ssh-help pre { padding: 12px 14px; margin: 8px 0 18px; overflow-x: auto; color: #bcd3ef; }
+
+  #linkpanel {
+    position: fixed; top: 74px; right: 20px; width: 344px;
+    max-height: calc(100vh - 100px); overflow-y: auto;
+    background: var(--bg-raise); border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: 0 16px 44px rgba(0,0,0,.5);
+    transform: translateX(calc(100% + 28px));
+    transition: transform .25s cubic-bezier(.32,.72,.28,1);
+    z-index: 26;
+  }
+  #linkpanel.open { transform: translateX(0); }
+  .lp-head {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 14px 16px; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; background: var(--bg-raise); border-radius: 12px 12px 0 0; z-index: 1;
+  }
+  .lp-title { font-size: 14px; font-weight: 700; }
+  .lp-sub { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+  #lp-close, #tp-close, #hp-close {
+    margin-left: auto; background: transparent; border: 0; color: var(--text-dim);
+    font-size: 14px; cursor: pointer; padding: 2px 6px;
+  }
+  #lp-close:hover, #tp-close:hover, #hp-close:hover { color: var(--text); }
+  .lp-body { padding: 14px 16px 16px; }
+  .lp-toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13.5px; font-weight: 500; margin-bottom: 14px;
+  }
+  .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch i {
+    position: absolute; inset: 0; background: #22314e; border: 1px solid var(--line);
+    border-radius: 22px; cursor: pointer; transition: background .15s;
+  }
+  .switch i::before {
+    content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--text-dim); top: 2px; left: 2px; transition: transform .15s, background .15s;
+  }
+  .switch input:checked + i { background: rgba(61,220,151,.25); border-color: rgba(61,220,151,.5); }
+  .switch input:checked + i::before { transform: translateX(18px); background: var(--ok); }
+  .lp-field { margin-bottom: 12px; }
+  .lp-field > label {
+    display: block; font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim); margin-bottom: 7px;
+  }
+  .lp-profiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .lp-prof {
+    text-align: left; padding: 9px 11px; cursor: pointer;
+    background: #0d1526; border: 1px solid var(--line); border-radius: 9px;
+    color: var(--text); transition: border-color .15s, background .15s;
+  }
+  .lp-prof:hover { border-color: #3a527a; background: #101b32; }
+  .lp-prof.active { border-color: var(--accent); background: rgba(47,129,247,.12); }
+  .lp-prof .p-name { font-family: var(--sans); font-size: 13px; font-weight: 700; }
+  .lp-prof .p-meta { font-family: var(--mono); font-size: 10px; color: var(--text-dim); margin-top: 3px; line-height: 1.5; }
+  .lp-save {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+    margin: 12px 0 14px; cursor: pointer;
+  }
+  .lp-apply {
+    width: 100%; padding: 10px; font-family: var(--sans); font-size: 13.5px; font-weight: 700;
+    color: #fff; background: var(--accent); border: 0; border-radius: 8px; cursor: pointer;
+  }
+  .lp-apply:hover { filter: brightness(1.12); }
+  .lp-apply:disabled { opacity: .55; cursor: wait; }
+  .lp-target {
+    margin-top: 12px; font-family: var(--mono); font-size: 10.5px;
+    color: var(--text-dim); line-height: 1.6; word-break: break-all; white-space: pre-wrap;
+  }
+  .lp-log, .tp-log {
+    margin-top: 10px; padding: 10px 12px; max-height: 150px; overflow-y: auto;
+    font-family: var(--mono); font-size: 11px; line-height: 1.7; color: #bcd3ef;
+    background: #0d1526; border: 1px solid var(--line); border-radius: 8px;
+    white-space: pre-wrap;
+  }
+  .lp-log:empty { display: none; }
+
+  #testpanel, #historypanel {
+    position: fixed; left: 20px; bottom: 20px; width: 440px;
+    max-height: 48vh; display: none; flex-direction: column;
+    background: var(--bg-raise); border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: 0 16px 44px rgba(0,0,0,.5); z-index: 26;
+  }
+  #testpanel.open, #historypanel.open { display: flex; }
+  .tp-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; border-bottom: 1px solid var(--line);
+    font-size: 14px; font-weight: 700;
+  }
+  .tp-log { flex: 1; margin: 12px 16px 16px; max-height: none; }
+  .t-ok { color: var(--ok); }
+  .t-warn { color: var(--warn); }
+  .t-err { color: var(--down); }
+  #historypanel { left: auto; right: 20px; bottom: 20px; width: 380px; }
+  .hp-list { flex: 1; overflow-y: auto; padding: 10px 12px 14px; }
+  .hp-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px;
+    margin-bottom: 8px; font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+  }
+  .hp-item b { color: var(--text); font-weight: 600; }
+  .hp-item button {
+    margin-left: auto; font-family: var(--sans); font-size: 11.5px; color: var(--text);
+    background: transparent; border: 1px solid var(--line); border-radius: 6px;
+    padding: 5px 9px; cursor: pointer;
+  }
+  .hp-item button:hover { border-color: var(--accent); }
+
+  @media (prefers-reduced-motion: reduce) {
+    #drawer, #overlay, #tooltip, #linkpanel { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>WAN LAB MANAGER</h1>
+  <span class="sub">2 ISPs · 3 sites · Sophos XGS</span>
+  <div class="legend">
+    <span><i class="dot" id="legend-isp-a" style="background:#4fc3f7"></i><em id="legend-isp-a-name" style="font-style:normal">ISP-1</em></span>
+    <span><i class="dot" id="legend-isp-b" style="background:#34d399"></i><em id="legend-isp-b-name" style="font-style:normal">ISP-2</em></span>
+    <span><i class="dot" style="background:var(--warn)"></i>perfil ativo</span>
+    <span><i class="dot" style="background:var(--down)"></i>desativado</span>
+  </div>
+  <div class="hdr-actions">
+    <span class="sync"><i class="dot" id="sync-dot" style="background:#3a4c6e"></i><span id="sync-text">servidor · aguardando</span></span>
+    <button id="btn-test">Testar ambiente</button>
+    <button id="btn-history">Histórico</button>
+    <button id="btn-load">Importar JSON</button>
+    <button id="btn-export">Exportar</button>
+    <input type="file" id="file-input" accept=".json,application/json" hidden>
+  </div>
+</header>
+
+<canvas id="stage"></canvas>
+<div id="tooltip"></div>
+
+<div id="overlay"></div>
+<aside id="drawer" aria-hidden="true">
+  <div class="drawer-head">
+    <div class="fw-badge">XGS</div>
+    <div>
+      <div class="drawer-title" id="drawer-title">—</div>
+      <div class="drawer-url" id="drawer-url">—</div>
+    </div>
+    <div class="drawer-actions">
+      <a class="btn" id="drawer-newtab" href="#" target="_blank" rel="noopener">Abrir em nova aba ↗</a>
+      <button id="drawer-close" aria-label="Fechar painel">Fechar ✕</button>
+    </div>
+  </div>
+
+  <div class="tabbar" role="tablist">
+    <button class="tab-btn active" data-tab="web" role="tab">WebAdmin</button>
+    <button class="tab-btn" data-tab="ssh" role="tab">Console SSH</button>
+  </div>
+
+  <div class="pane active" id="pane-web">
+    <iframe id="web-iframe" title="Interface de gestão do firewall" src="about:blank"></iframe>
+    <div class="iframe-note">
+      Se a página não carregar aqui, o firewall pode estar bloqueando iframes
+      (X-Frame-Options) ou usando certificado autoassinado — use “Abrir em nova aba”.
+    </div>
+  </div>
+
+  <div class="pane" id="pane-ssh">
+    <iframe id="ssh-iframe" title="Console SSH do firewall" src="about:blank"></iframe>
+    <div id="ssh-help">
+      <h2>Console SSH via gateway web</h2>
+      <p>
+        O docker-compose deste projeto já sobe um serviço <code>webssh</code> na porta 8888.
+        Se esta mensagem aparece, o campo <code>sshGateway.urlTemplate</code> da topologia
+        está vazio ou o serviço não está no ar. O template padrão é:
+      </p>
+      <pre>"sshGateway": {
+  "urlTemplate": "http://{origin-host}:8888/?hostname={host}&amp;username={user}&amp;port={port}"
+}</pre>
+      <p>
+        <code>{origin-host}</code> é trocado pelo host que você usa para acessar esta página;
+        <code>{host}</code>, <code>{user}</code> e <code>{port}</code> vêm de cada firewall
+        (<code>sshHost</code>, <code>sshUser</code>, <code>sshPort</code>).
+      </p>
+    </div>
+  </div>
+</aside>
+
+<aside id="linkpanel" aria-hidden="true">
+  <div class="lp-head">
+    <div>
+      <div class="lp-title" id="lp-title">—</div>
+      <div class="lp-sub" id="lp-sub">—</div>
+    </div>
+    <button id="lp-close" aria-label="Fechar painel do link">✕</button>
+  </div>
+  <div class="lp-body">
+    <div class="lp-toggle-row">
+      <span>Link ativo</span>
+      <label class="switch"><input type="checkbox" id="lp-enabled"><i></i></label>
+    </div>
+    <div class="lp-field">
+      <label>Perfil de qualidade do link</label>
+      <div class="lp-profiles" id="lp-profiles"></div>
+    </div>
+    <label class="lp-save"><input type="checkbox" id="lp-persist"> Salvar configuração no VyOS após aplicar</label>
+    <button class="lp-apply" id="lp-apply">Aplicar no VyOS</button>
+    <div class="lp-target" id="lp-target">—</div>
+    <pre class="lp-log" id="lp-log"></pre>
+  </div>
+</aside>
+
+<aside id="testpanel" aria-hidden="true">
+  <div class="tp-head">
+    <span>Teste do ambiente</span>
+    <button id="tp-close" aria-label="Fechar teste">✕</button>
+  </div>
+  <pre class="tp-log" id="tp-log"></pre>
+</aside>
+
+<aside id="historypanel" aria-hidden="true">
+  <div class="tp-head">
+    <span>Histórico de configurações</span>
+    <button id="hp-close" aria-label="Fechar histórico">✕</button>
+  </div>
+  <div class="hp-list" id="hp-list"></div>
+</aside>
+
+<script>
+(() => {
+  "use strict";
+
+  const canvas  = document.getElementById("stage");
+  const ctx     = canvas.getContext("2d");
+  const tooltip = document.getElementById("tooltip");
+  const overlay = document.getElementById("overlay");
+  const drawer  = document.getElementById("drawer");
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const COLORS = {
+    ok:   "#3ddc97",
+    warn: "#ffc233",
+    down: "#ff5c5c",
+    grid: "rgba(96, 138, 200, 0.09)",
+    gridStrong: "rgba(96, 138, 200, 0.18)"
+  };
+
+  // ---------------------------------------------------------------
+  // Backend API helper (token prompted lazily on first 401)
+  // ---------------------------------------------------------------
+  let authToken = null;
+
+  async function api(path, opts = {}) {
+    const headers = { ...(opts.headers || {}) };
+    if (opts.json !== undefined) {
+      headers["Content-Type"] = "application/json";
+      opts.body = JSON.stringify(opts.json);
+    }
+    if (authToken) headers["X-Auth-Token"] = authToken;
+    const res = await fetch(path, { ...opts, headers });
+    if (res.status === 401 && !opts._retried) {
+      const t = window.prompt("Este servidor exige token (API_TOKEN). Informe o token:");
+      if (t) { authToken = t; return api(path, { ...opts, _retried: true }); }
+    }
+    const body = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(body?.detail || `HTTP ${res.status}`);
+    return body;
+  }
+
+  function validateTopology(data) {
+    if (!data || typeof data !== "object") throw new Error("JSON raiz inválido");
+    for (const k of ["isps", "sites", "links"]) {
+      if (!Array.isArray(data[k])) throw new Error(`campo "${k}" ausente ou não é uma lista`);
+    }
+    return data;
+  }
+
+  function applyTopology(data) {
+    topo = validateTopology(data);
+    for (const l of topo.links) {
+      l.stats = l.stats || {};
+      if (l.stats.baseUsagePct == null) l.stats.baseUsagePct = l.stats.usagePct || 0;
+      if (!l.stats.profile) l.stats.profile = defaultProfileKey();
+    }
+    closeDrawer();
+    closeLinkPanel();
+    updateLegend();
+    layout();
+  }
+
+  function defaultProfileKey() {
+    return topo?.settings?.defaultProfile || Object.keys(topo?.linkProfiles || {})[0] || "OK";
+  }
+
+  function updateLegend() {
+    const [a, b] = topo.isps;
+    if (a) {
+      document.getElementById("legend-isp-a").style.background = a.color;
+      document.getElementById("legend-isp-a-name").textContent = a.name;
+    }
+    if (b) {
+      document.getElementById("legend-isp-b").style.background = b.color;
+      document.getElementById("legend-isp-b-name").textContent = b.name;
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Isometric projection (2:1)
+  // ---------------------------------------------------------------
+  const GRID = 11;
+  const ZOOM = 0.78;
+  let tile = 44;
+  let originX = 0, originY = 0;
+
+  function iso(gx, gy, gz = 0) {
+    return {
+      x: originX + (gx - gy) * (tile / 2),
+      y: originY + (gx + gy) * (tile / 4) - gz
+    };
+  }
+
+  function layout() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = window.innerWidth, h = window.innerHeight;
+    canvas.width  = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width  = w + "px";
+    canvas.style.height = h + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    tile = Math.max(28, Math.min((w - 140) / GRID, ((h - 170) * 4) / (2 * GRID)) * ZOOM);
+    originX = w / 2;
+    originY = (h - (GRID * tile) / 2) / 2 + 46;
+    if (topo) buildGeometry();
+  }
+
+  // ---------------------------------------------------------------
+  // Geometry
+  // ---------------------------------------------------------------
+  let topo = null;
+  const nodes = new Map();
+  const links = [];
+
+  function boxCorners(gx, gy, w, d) {
+    return [
+      [gx - w / 2, gy - d / 2],
+      [gx + w / 2, gy - d / 2],
+      [gx + w / 2, gy + d / 2],
+      [gx - w / 2, gy + d / 2]
+    ];
+  }
+
+  function projectBox(node) {
+    const c = boxCorners(node.gx, node.gy, node.w, node.d);
+    node.base = c.map(([x, y]) => iso(x, y, 0));
+    node.top  = c.map(([x, y]) => iso(x, y, node.h));
+  }
+
+  function buildGeometry() {
+    nodes.clear();
+    links.length = 0;
+
+    for (const isp of topo.isps) {
+      const [gx, gy] = isp.grid;
+      const node = { kind: "isp", data: isp, gx, gy, w: 1.8, d: 1.8, h: tile * 0.14 };
+      projectBox(node);
+      const c0 = iso(gx, gy, node.h);
+      const rx = tile * 0.58, ry = rx * 0.5;
+      node.cyl = { cx: c0.x, rx, ry, baseY: c0.y, topY: c0.y - tile * 0.92 };
+      node.anchor = iso(gx, gy + 0.75, tile * 0.32);
+      node.bbox = {
+        x1: c0.x - rx - 4, x2: c0.x + rx + 4,
+        y1: node.cyl.topY - ry - tile * 0.6,
+        y2: iso(gx, gy + node.d / 2, 0).y + 4
+      };
+      nodes.set(isp.id, node);
+    }
+
+    for (const site of topo.sites) {
+      const [gx, gy] = site.grid;
+      const node = { kind: "firewall", data: site, gx, gy, w: 2.15, d: 1.45, h: tile * 0.5 };
+      projectBox(node);
+      node.anchor = iso(gx, gy - node.d / 2 + 0.2, node.h * 0.9);
+      const xs = [...node.base, ...node.top].map(p => p.x);
+      const ys = [...node.base, ...node.top].map(p => p.y);
+      node.bbox = { x1: Math.min(...xs), y1: Math.min(...ys), x2: Math.max(...xs), y2: Math.max(...ys) };
+      nodes.set(site.id, node);
+    }
+
+    for (const l of topo.links) {
+      const from = nodes.get(l.from);
+      const to   = nodes.get(l.to);
+      if (!from || !to) continue;
+      const p0 = from.anchor, p2 = to.anchor;
+      const cp = { x: (p0.x + p2.x) / 2, y: Math.min(p0.y, p2.y) - tile * 0.6 };
+      const pts = [];
+      const N = 36;
+      for (let i = 0; i <= N; i++) {
+        const t = i / N, mt = 1 - t;
+        pts.push({
+          x: mt * mt * p0.x + 2 * mt * t * cp.x + t * t * p2.x,
+          y: mt * mt * p0.y + 2 * mt * t * cp.y + t * t * p2.y
+        });
+      }
+      links.push({ data: l, from, to, pts, phase: Math.random() });
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Drawing helpers
+  // ---------------------------------------------------------------
+  function shade(hex, f) {
+    const n = parseInt(hex.slice(1), 16);
+    let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    if (f < 0) { r *= 1 + f; g *= 1 + f; b *= 1 + f; }
+    else { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; }
+    return `rgb(${r | 0},${g | 0},${b | 0})`;
+  }
+
+  function poly(pts, fill, stroke) {
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+    if (fill)   { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+  }
+
+  function groundShadow(cx, cy, r) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(1, 0.5);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+    g.addColorStop(0, "rgba(0,0,0,0.5)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function hoverRing(cx, cy, r, color) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(1, 0.5);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.6;
+    ctx.setLineDash([7, 7]);
+    ctx.lineDashOffset = reduceMotion ? 0 : -perfNow / 40;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawFloor() {
+    for (let i = 0; i <= GRID; i++) {
+      const a = iso(i, 0), b = iso(i, GRID);
+      const c = iso(0, i), d = iso(GRID, i);
+      ctx.strokeStyle = (i === 0 || i === GRID) ? COLORS.gridStrong : COLORS.grid;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(d.x, d.y); ctx.stroke();
+    }
+  }
+
+  function drawISP(node, hovered) {
+    const col = node.data.color;
+    const g0 = iso(node.gx, node.gy, 0);
+    groundShadow(g0.x, g0.y + 2, tile * 1.15);
+    if (hovered) hoverRing(g0.x, g0.y, tile * 1.15, col);
+
+    const b = node.base, t = node.top;
+    poly([b[1], b[2], t[2], t[1]], "#101a2f");
+    poly([b[2], b[3], t[3], t[2]], "#0b1424");
+    poly(t, "#1a2842", "rgba(255,255,255,0.06)");
+
+    const { cx, rx, ry, baseY, topY } = node.cyl;
+    const grad = ctx.createLinearGradient(cx - rx, 0, cx + rx, 0);
+    grad.addColorStop(0,    shade(col, -0.68));
+    grad.addColorStop(0.42, shade(col, -0.18));
+    grad.addColorStop(1,    shade(col, -0.55));
+    ctx.beginPath();
+    ctx.moveTo(cx - rx, topY);
+    ctx.lineTo(cx - rx, baseY);
+    ctx.ellipse(cx, baseY, rx, ry, 0, Math.PI, 0, true);
+    ctx.lineTo(cx + rx, topY);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    const bandY = topY + (baseY - topY) * 0.55;
+    ctx.beginPath();
+    ctx.ellipse(cx, bandY, rx, ry, 0, Math.PI, 0, true);
+    ctx.strokeStyle = "rgba(255,255,255,0.14)";
+    ctx.lineWidth = Math.max(2, tile * 0.05);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.ellipse(cx, topY, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fillStyle = shade(col, 0.14);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.22)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    const s = tile / 56;
+    ctx.save();
+    ctx.translate(cx, topY);
+    ctx.scale(1, 0.5);
+    ctx.fillStyle = "rgba(10,20,38,0.85)";
+    for (let i = 0; i < 4; i++) {
+      ctx.save();
+      ctx.rotate(i * Math.PI / 2 + Math.PI / 4);
+      const r0 = 7 * s, r1 = rx * 0.82, hw = 2.4 * s, hh = 6 * s, hl = 8 * s;
+      ctx.beginPath();
+      if (i % 2 === 0) {
+        ctx.moveTo(r0, -hw); ctx.lineTo(r1 - hl, -hw); ctx.lineTo(r1 - hl, -hh);
+        ctx.lineTo(r1, 0);
+        ctx.lineTo(r1 - hl, hh); ctx.lineTo(r1 - hl, hw); ctx.lineTo(r0, hw);
+      } else {
+        ctx.moveTo(r1, -hw); ctx.lineTo(r0 + hl, -hw); ctx.lineTo(r0 + hl, -hh);
+        ctx.lineTo(r0, 0);
+        ctx.lineTo(r0 + hl, hh); ctx.lineTo(r0 + hl, hw); ctx.lineTo(r1, hw);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+
+    const mastTop = { x: cx, y: topY - tile * 0.5 };
+    ctx.strokeStyle = shade(col, -0.2);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, topY - ry * 0.2);
+    ctx.lineTo(mastTop.x, mastTop.y);
+    ctx.stroke();
+    const pulse = reduceMotion ? 0.5 : (Math.sin(perfNow / 450 + node.gx) + 1) / 2;
+    ctx.beginPath();
+    ctx.arc(mastTop.x, mastTop.y, 3 + pulse * 1.6, 0, Math.PI * 2);
+    ctx.fillStyle = col;
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 10 + pulse * 10;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    label(node, node.data.name, node.data.asn, node.d / 2 + 0.45);
+  }
+
+  function drawFirewall(node, hovered) {
+    const g0 = iso(node.gx, node.gy, 0);
+    groundShadow(g0.x, g0.y + 2, tile * 1.25);
+    if (hovered) hoverRing(g0.x, g0.y, tile * 1.3, "#5ea3ff");
+
+    const b = node.base, t = node.top;
+    const chassis = "#9fb2cf";
+    const s = tile / 56;
+
+    poly([b[1], b[2], t[2], t[1]], "#233350");
+    poly([b[2], b[3], t[3], t[2]], "#131d33");
+    poly(t, shade(chassis, -0.06), "rgba(255,255,255,0.12)");
+
+    ctx.strokeStyle = "#2f81f7";
+    ctx.lineWidth = Math.max(1.5, 2 * s);
+    ctx.beginPath();
+    ctx.moveTo(t[1].x, t[1].y);
+    ctx.lineTo(t[2].x, t[2].y);
+    ctx.lineTo(t[3].x, t[3].y);
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(b[2].x, b[2].y - node.h * 0.72);
+    ctx.transform(-1, -0.5, 0, 1, 0, 0);
+    const faceLen = node.w * tile / 2;
+    const portW = 4.6 * s, pitch = 6.2 * s;
+    let px = 5 * s;
+    for (let i = 0; i < 6 && px + portW < faceLen - 16 * s; i++, px += pitch) {
+      ctx.fillStyle = "#060b16";
+      ctx.fillRect(px, 0, portW, portW * 1.15);
+      ctx.fillStyle = i < 4 ? COLORS.ok : "#31435f";
+      ctx.fillRect(px + portW * 0.22, -2.6 * s, portW * 0.56, 1.6 * s);
+    }
+    const sfpX = faceLen - 14.5 * s;
+    ctx.fillStyle = "#060b16";
+    ctx.fillRect(sfpX, 0, 11 * s, portW * 1.15);
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sfpX, 0, 11 * s, portW * 1.15);
+    ctx.beginPath();
+    ctx.moveTo(sfpX + 5.5 * s, 0);
+    ctx.lineTo(sfpX + 5.5 * s, portW * 1.15);
+    ctx.stroke();
+    ctx.fillStyle = COLORS.ok;
+    ctx.fillRect(2 * s, node.h * 0.42, 2 * s, 2 * s);
+    ctx.fillStyle = "#5ea3ff";
+    ctx.globalAlpha = reduceMotion ? 1 : (Math.sin(perfNow / 300 + node.gx * 2) > -0.3 ? 1 : 0.25);
+    ctx.fillRect(2 * s, node.h * 0.42 + 4 * s, 2 * s, 2 * s);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(b[1].x - 3 * s, b[1].y - node.h * 0.66);
+    ctx.transform(-1, 0.5, 0, 1, 0, 0);
+    ctx.fillStyle = "rgba(255,255,255,0.10)";
+    const ventLen = node.d * tile / 2 - 8 * s;
+    for (let vx = 3 * s; vx < ventLen; vx += 4.4 * s) {
+      ctx.fillRect(vx, 0, 1.8 * s, node.h * 0.36);
+    }
+    ctx.restore();
+
+    const tc = iso(node.gx, node.gy - 0.08, node.h);
+    ctx.save();
+    ctx.translate(tc.x, tc.y);
+    ctx.transform(1, 0.5, -1, 0.5, 0, 0);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(16,26,46,0.95)";
+    ctx.font = `700 ${Math.max(8, tile * 0.17)}px ${getComputedStyle(document.body).getPropertyValue("--mono")}`;
+    ctx.fillText("SOPHOS", 0, 2 * s);
+    ctx.fillStyle = "rgba(16,26,46,0.55)";
+    ctx.font = `500 ${Math.max(6, tile * 0.1)}px ${getComputedStyle(document.body).getPropertyValue("--mono")}`;
+    ctx.fillText(node.data.firewall.model.replace("Sophos ", ""), 0, 2 * s + tile * 0.16);
+    ctx.restore();
+
+    label(node, node.data.name, node.data.firewall.hostname + " · " + node.data.firewall.model, node.d / 2 + 0.35);
+  }
+
+  function label(node, title, sub, dyOffset) {
+    const p = iso(node.gx, node.gy + dyOffset, 0);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(219,231,247,0.92)";
+    ctx.font = `700 ${Math.max(11, tile * 0.22)}px ${getComputedStyle(document.body).getPropertyValue("--sans")}`;
+    ctx.fillText(title, p.x, p.y + 14);
+    ctx.fillStyle = "rgba(125,144,173,0.9)";
+    ctx.font = `500 ${Math.max(9, tile * 0.17)}px ${getComputedStyle(document.body).getPropertyValue("--mono")}`;
+    ctx.fillText(sub, p.x, p.y + 30);
+  }
+
+  // Color rules:
+  //   down (interface disabled)      -> red, dashed
+  //   impairment profile != default  -> yellow
+  //   healthy                        -> ISP tone (blue / green)
+  function linkColor(link) {
+    const s = link.data.stats;
+    if (s.status === "down") return COLORS.down;
+    if (s.profile && s.profile !== defaultProfileKey()) return COLORS.warn;
+    return topo.isps.find(i => i.id === link.data.from)?.color || "#6ea8ff";
+  }
+
+  function drawLink(link, hovered) {
+    const { pts, data } = link;
+    const color = linkColor(link);
+    const usage = data.stats.usagePct / 100;
+    const down = data.stats.status === "down";
+
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = hovered ? 0.95 : 0.55;
+    ctx.lineWidth = hovered ? 3.5 : 1.5 + usage * 2;
+    if (down) ctx.setLineDash([5, 7]);
+    if (hovered) { ctx.shadowColor = color; ctx.shadowBlur = 10; }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+
+    if (!down && !reduceMotion && usage > 0) {
+      const count = 1 + Math.round(usage * 3);
+      const speed = 0.00006 + usage * 0.00018;
+      for (let k = 0; k < count; k++) {
+        const t = ((perfNow * speed) + link.phase + k / count) % 1;
+        const idx = Math.min(pts.length - 1, Math.floor(t * (pts.length - 1)));
+        const p = pts[idx];
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, hovered ? 3 : 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = shade(color, 0.35);
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------
+  // Render loop
+  // ---------------------------------------------------------------
+  let perfNow = 0;
+  let hoverLink = null;
+  let hoverNode = null;
+  let selectedLink = null;
+
+  function render(ts) {
+    perfNow = ts || 0;
+    const w = window.innerWidth, h = window.innerHeight;
+    ctx.clearRect(0, 0, w, h);
+
+    const vg = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.25, w / 2, h / 2, Math.max(w, h) * 0.75);
+    vg.addColorStop(0, "rgba(20,32,58,0.25)");
+    vg.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, w, h);
+
+    drawFloor();
+
+    for (const l of links) if (l !== hoverLink && l !== selectedLink) drawLink(l, false);
+    if (selectedLink && selectedLink !== hoverLink) drawLink(selectedLink, true);
+    if (hoverLink) drawLink(hoverLink, true);
+
+    const sorted = [...nodes.values()].sort((a, b) => (a.gx + a.gy) - (b.gx + b.gy));
+    for (const n of sorted) {
+      if (n.kind === "isp") drawISP(n, n === hoverNode);
+      else drawFirewall(n, n === hoverNode);
+    }
+
+    requestAnimationFrame(render);
+  }
+
+  // ---------------------------------------------------------------
+  // Interaction
+  // ---------------------------------------------------------------
+  function nodeAt(x, y) {
+    const sorted = [...nodes.values()].sort((a, b) => (b.gx + b.gy) - (a.gx + a.gy));
+    for (const n of sorted) {
+      const bb = n.bbox;
+      if (x >= bb.x1 && x <= bb.x2 && y >= bb.y1 && y <= bb.y2) return n;
+    }
+    return null;
+  }
+
+  function linkAt(x, y) {
+    let best = null, bestD = 9;
+    for (const l of links) {
+      for (const p of l.pts) {
+        const d = Math.hypot(p.x - x, p.y - y);
+        if (d < bestD) { bestD = d; best = l; }
+      }
+    }
+    return best;
+  }
+
+  function fmtMbps(v) {
+    return v >= 1000 ? (v / 1000).toFixed(1).replace(".", ",") + " Gbps" : v + " Mbps";
+  }
+
+  const STATUS_PT = { up: "operacional", degraded: "perfil ativo", down: "desativado" };
+
+  function showLinkTooltip(link, x, y) {
+    const s = link.data.stats;
+    const color = linkColor(link);
+    const statusColor = s.status === "up" ? COLORS.ok : s.status === "degraded" ? COLORS.warn : COLORS.down;
+    tooltip.innerHTML = `
+      <div class="tt-title">${link.from.data.name} → ${link.to.data.name}</div>
+      <div class="tt-sub">circuito ${link.data.circuit}</div>
+      <div class="row"><span>Status</span>
+        <b class="status"><i class="dot" style="background:${statusColor}"></i>${STATUS_PT[s.status] || s.status}</b></div>
+      <div class="row"><span>Perfil</span><b>${s.profile || "—"}</b></div>
+      <div class="row"><span>Banda contratada</span><b>${fmtMbps(s.bandwidthMbps)}</b></div>
+      <div class="row"><span>Utilização</span><b>${s.usagePct}%</b></div>
+      <div class="bar"><i style="width:${Math.min(100, s.usagePct)}%;background:${color}"></i></div>
+      <div class="row" style="margin-top:6px"><span>Latência</span><b>${s.latencyMs} ms</b></div>
+      <div class="row"><span>Jitter</span><b>${s.jitterMs} ms</b></div>
+      <div class="row"><span>Perda de pacotes</span><b>${s.lossPct}%</b></div>
+      <div class="hint">Clique para trocar o perfil ou desativar o link</div>`;
+    positionTooltip(x, y);
+  }
+
+  function showNodeTooltip(node, x, y) {
+    if (node.kind === "firewall") {
+      const fw = node.data.firewall;
+      tooltip.innerHTML = `
+        <div class="tt-title">${node.data.name}</div>
+        <div class="tt-sub">${fw.hostname} · ${fw.model}</div>
+        <div class="row"><span>Gestão</span><b>${fw.mgmtUrl}</b></div>
+        <div class="row"><span>SSH</span><b>${fw.sshUser || "admin"}@${fw.sshHost || "—"}</b></div>
+        <div class="hint">Clique para abrir WebAdmin e console SSH</div>`;
+    } else {
+      tooltip.innerHTML = `
+        <div class="tt-title">${node.data.name}</div>
+        <div class="tt-sub">${node.data.asn}</div>
+        <div class="row"><span>Circuitos ativos</span>
+          <b>${links.filter(l => l.data.from === node.data.id && l.data.stats.status !== "down").length} / ${links.filter(l => l.data.from === node.data.id).length}</b></div>`;
+    }
+    positionTooltip(x, y);
+  }
+
+  function positionTooltip(x, y) {
+    tooltip.classList.add("visible");
+    const r = tooltip.getBoundingClientRect();
+    let tx = x + 18, ty = y + 18;
+    if (tx + r.width  > window.innerWidth  - 12) tx = x - r.width  - 18;
+    if (ty + r.height > window.innerHeight - 12) ty = y - r.height - 18;
+    tooltip.style.left = tx + "px";
+    tooltip.style.top  = ty + "px";
+  }
+
+  function hideTooltip() { tooltip.classList.remove("visible"); }
+
+  canvas.addEventListener("mousemove", (e) => {
+    const x = e.clientX, y = e.clientY;
+    hoverNode = nodeAt(x, y);
+    hoverLink = hoverNode ? null : linkAt(x, y);
+    canvas.classList.toggle("pointer", (!!hoverNode && hoverNode.kind === "firewall") || !!hoverLink);
+    if (hoverLink)      showLinkTooltip(hoverLink, x, y);
+    else if (hoverNode) showNodeTooltip(hoverNode, x, y);
+    else hideTooltip();
+  });
+
+  canvas.addEventListener("mouseleave", () => {
+    hoverNode = null; hoverLink = null;
+    hideTooltip();
+  });
+
+  canvas.addEventListener("click", (e) => {
+    const n = nodeAt(e.clientX, e.clientY);
+    if (n && n.kind === "firewall") {
+      closeLinkPanel();
+      openDrawer(n.data);
+      return;
+    }
+    const l = n ? null : linkAt(e.clientX, e.clientY);
+    if (l) openLinkPanel(l);
+    else closeLinkPanel();
+  });
+
+  // ---------------------------------------------------------------
+  // Drawer: WebAdmin + SSH console tabs
+  // ---------------------------------------------------------------
+  const drawerTitle  = document.getElementById("drawer-title");
+  const drawerUrl    = document.getElementById("drawer-url");
+  const webFrame     = document.getElementById("web-iframe");
+  const sshFrame     = document.getElementById("ssh-iframe");
+  const sshHelp      = document.getElementById("ssh-help");
+  const drawerNewTab = document.getElementById("drawer-newtab");
+  const tabButtons   = [...document.querySelectorAll(".tab-btn")];
+  const panes        = { web: document.getElementById("pane-web"), ssh: document.getElementById("pane-ssh") };
+
+  let currentSite = null;
+
+  function sshUrlFor(fw) {
+    const tpl = topo?.sshGateway?.urlTemplate;
+    if (!tpl || !fw.sshHost) return null;
+    return tpl
+      .replace("{origin-host}", window.location.hostname)
+      .replace("{host}", encodeURIComponent(fw.sshHost))
+      .replace("{user}", encodeURIComponent(fw.sshUser || "admin"))
+      .replace("{port}", encodeURIComponent(fw.sshPort || 22));
+  }
+
+  function setTab(name) {
+    tabButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.tab === name));
+    Object.entries(panes).forEach(([k, el]) => el.classList.toggle("active", k === name));
+
+    const fw = currentSite.firewall;
+    if (name === "web") {
+      if (webFrame.src !== fw.mgmtUrl) webFrame.src = fw.mgmtUrl;
+      drawerNewTab.href = fw.mgmtUrl;
+    } else {
+      const url = sshUrlFor(fw);
+      if (url) {
+        sshHelp.classList.remove("visible");
+        if (sshFrame.src !== url) sshFrame.src = url;
+        drawerNewTab.href = url;
+      } else {
+        sshFrame.src = "about:blank";
+        sshHelp.classList.add("visible");
+        drawerNewTab.href = fw.mgmtUrl;
+      }
+    }
+  }
+
+  function openDrawer(site) {
+    currentSite = site;
+    const fw = site.firewall;
+    drawerTitle.textContent = `${site.name} — ${fw.hostname}`;
+    drawerUrl.textContent   = `${fw.model} · ${fw.mgmtUrl}`;
+    drawer.classList.add("open");
+    overlay.classList.add("open");
+    drawer.setAttribute("aria-hidden", "false");
+    hideTooltip();
+    setTab("web");
+  }
+
+  function closeDrawer() {
+    drawer.classList.remove("open");
+    overlay.classList.remove("open");
+    drawer.setAttribute("aria-hidden", "true");
+    setTimeout(() => { webFrame.src = "about:blank"; sshFrame.src = "about:blank"; }, 320);
+  }
+
+  tabButtons.forEach(btn => btn.addEventListener("click", () => setTab(btn.dataset.tab)));
+  document.getElementById("drawer-close").addEventListener("click", closeDrawer);
+  overlay.addEventListener("click", closeDrawer);
+  window.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeDrawer(); closeLinkPanel(); } });
+
+  // ---------------------------------------------------------------
+  // Link state sync (server is the source of truth)
+  // ---------------------------------------------------------------
+  function syncLinkState(link, disabled, egressPolicy) {
+    const s = link.data.stats;
+    const def = defaultProfileKey();
+    s.profile = egressPolicy || def;
+    s.status = disabled ? "down" : (s.profile !== def ? "degraded" : "up");
+    s.usagePct = disabled ? 0 : s.baseUsagePct;
+    const p = topo.linkProfiles?.[s.profile];
+    if (p) {
+      s.latencyMs = p.delayMs ?? s.latencyMs;
+      s.lossPct   = p.lossPct ?? 0;
+      s.jitterMs  = p.jitterMs ?? 0;
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Link control panel
+  // ---------------------------------------------------------------
+  const linkPanel = document.getElementById("linkpanel");
+  const lpEl = (id) => document.getElementById(id);
+  let lpSelectedProfile = null;
+
+  function lpLog(msg) {
+    const el = lpEl("lp-log");
+    el.textContent += msg + "\n";
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function describeTarget(link) {
+    const ctl = link.data.control;
+    if (!ctl) return "Sem controle VyOS configurado — adicione o campo \"control\" a este link na topologia.";
+    const r = topo?.vyos?.routers?.[ctl.router];
+    if (!r) return `Roteador "${ctl.router}" não encontrado em vyos.routers.`;
+    const iface = ctl.vif != null ? `${ctl.interface}.${ctl.vif}` : ctl.interface;
+    return `${r.name} · ${iface} · egress → perfil selecionado\n${r.apiUrl} (via servidor)`;
+  }
+
+  function renderProfileButtons() {
+    const wrap = lpEl("lp-profiles");
+    wrap.innerHTML = "";
+    const profiles = topo?.linkProfiles || {};
+    const keys = Object.keys(profiles);
+    if (!keys.length) {
+      wrap.innerHTML = `<div class="lp-target">Nenhum perfil em "linkProfiles" na topologia.</div>`;
+      return;
+    }
+    for (const key of keys) {
+      const p = profiles[key];
+      const btn = document.createElement("button");
+      btn.className = "lp-prof" + (key === lpSelectedProfile ? " active" : "");
+      btn.dataset.key = key;
+      const meta = [`${p.delayMs ?? 0}ms`];
+      if (p.lossPct) meta.push(`${p.lossPct}% loss`);
+      if (p.reorderingPct) meta.push(`reord ${p.reorderingPct}%`);
+      meta.push(`${p.bandwidthMbps ?? 1000}mbit`);
+      btn.innerHTML = `<div class="p-name">${p.label || key}</div><div class="p-meta">${meta.join(" · ")}</div>`;
+      btn.addEventListener("click", () => {
+        lpSelectedProfile = key;
+        [...wrap.children].forEach(c => c.classList.toggle("active", c.dataset.key === key));
+      });
+      wrap.appendChild(btn);
+    }
+  }
+
+  function openLinkPanel(link) {
+    selectedLink = link;
+    const s = link.data.stats;
+    lpSelectedProfile = s.profile || defaultProfileKey();
+    lpEl("lp-title").textContent = `${link.from.data.name} → ${link.to.data.name}`;
+    lpEl("lp-sub").textContent   = `circuito ${link.data.circuit}`;
+    lpEl("lp-enabled").checked   = s.status !== "down";
+    renderProfileButtons();
+    lpEl("lp-target").textContent = describeTarget(link);
+    lpEl("lp-log").textContent   = "";
+    linkPanel.classList.add("open");
+    linkPanel.setAttribute("aria-hidden", "false");
+    hideTooltip();
+  }
+
+  function closeLinkPanel() {
+    selectedLink = null;
+    linkPanel.classList.remove("open");
+    linkPanel.setAttribute("aria-hidden", "true");
+  }
+
+  lpEl("lp-apply").addEventListener("click", async () => {
+    if (!selectedLink) return;
+    const link = selectedLink;
+    lpEl("lp-log").textContent = "";
+    const profileKey = lpSelectedProfile;
+    if (!profileKey) { lpLog("✗ Selecione um perfil."); return; }
+    const enabled = lpEl("lp-enabled").checked;
+    const persist = lpEl("lp-persist").checked;
+
+    const btn = lpEl("lp-apply");
+    btn.disabled = true;
+    try {
+      const r = await api(`/api/links/${encodeURIComponent(link.data.id)}/apply`, {
+        method: "POST",
+        json: { enabled, profile: profileKey, persist }
+      });
+      (r.lines || []).forEach(l => lpLog(l.text));
+      syncLinkState(link, !enabled, profileKey);
+    } catch (err) {
+      lpLog("✗ " + err.message);
+      lpLog("Se o perfil não existir no roteador, rode \"Testar ambiente\" para criá-lo.");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  lpEl("lp-close").addEventListener("click", closeLinkPanel);
+
+  // ---------------------------------------------------------------
+  // Environment test (runs server-side)
+  // ---------------------------------------------------------------
+  const testPanel = document.getElementById("testpanel");
+  const testLog = document.getElementById("tp-log");
+  const LEVEL_CLASS = { ok: "t-ok", warn: "t-warn", err: "t-err" };
+
+  function tlog(msg, cls) {
+    const line = document.createElement("span");
+    if (cls) line.className = cls;
+    line.textContent = msg + "\n";
+    testLog.appendChild(line);
+    testLog.scrollTop = testLog.scrollHeight;
+  }
+
+  async function runTests() {
+    testPanel.classList.add("open");
+    testLog.textContent = "";
+    tlog("Executando testes no servidor…");
+    try {
+      const r = await api("/api/test", { method: "POST" });
+      testLog.textContent = "";
+      (r.lines || []).forEach(l => tlog(l.text, LEVEL_CLASS[l.level]));
+      refreshState();
+    } catch (err) {
+      tlog("✗ " + err.message, "t-err");
+    }
+  }
+
+  document.getElementById("btn-test").addEventListener("click", runTests);
+  document.getElementById("tp-close").addEventListener("click", () => testPanel.classList.remove("open"));
+
+  // ---------------------------------------------------------------
+  // State polling (server polls VyOS; the browser polls the server)
+  // ---------------------------------------------------------------
+  const syncDot = document.getElementById("sync-dot");
+  const syncText = document.getElementById("sync-text");
+
+  function setSync(state, extra) {
+    const map = {
+      idle:    ["#3a4c6e", "servidor · aguardando"],
+      ok:      [COLORS.ok, "VyOS · sincronizado " + (extra || "")],
+      partial: [COLORS.warn, "VyOS · parcial " + (extra || "")],
+      fail:    [COLORS.down, "VyOS · sem conexão"],
+      offline: [COLORS.down, "servidor · offline"]
+    };
+    const [color, text] = map[state] || map.idle;
+    syncDot.style.background = color;
+    syncText.textContent = text.trim();
+  }
+
+  async function refreshState() {
+    if (!topo) return;
+    let st;
+    try {
+      st = await api("/api/state");
+    } catch (_) {
+      setSync("offline");
+      return;
+    }
+    for (const link of links) {
+      const ls = st.links?.[link.data.id];
+      if (ls) syncLinkState(link, !!ls.disabled, ls.egress || null);
+    }
+    const routers = Object.values(st.routers || {});
+    const when = st.updatedAt ? st.updatedAt.slice(11, 19) : "";
+    if (!routers.length || !st.updatedAt) setSync("idle");
+    else if (routers.every(r => r.ok)) setSync("ok", when);
+    else if (routers.some(r => r.ok)) setSync("partial", when);
+    else setSync("fail");
+  }
+
+  setInterval(refreshState, 5000);
+
+  // ---------------------------------------------------------------
+  // Import / export / history (all persisted server-side)
+  // ---------------------------------------------------------------
+  const fileInput = document.getElementById("file-input");
+
+  function importFile(file) {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      testPanel.classList.add("open");
+      try {
+        const parsed = JSON.parse(reader.result);
+        const saved = await api("/api/topology", { method: "PUT", json: parsed });
+        applyTopology(saved);
+        tlog(`✓ "${file.name}" importado e persistido no servidor: ` +
+             `${saved.links.length} links, ${saved.sites.length} sites, ` +
+             `${Object.keys(saved.linkProfiles || {}).length} perfis`, "t-ok");
+        refreshState();
+      } catch (err) {
+        tlog(`✗ Falha ao importar "${file.name}": ${err.message}`, "t-err");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  document.getElementById("btn-load").addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files[0]) importFile(fileInput.files[0]);
+    fileInput.value = "";
+  });
+  window.addEventListener("dragover", (e) => e.preventDefault());
+  window.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const f = e.dataTransfer?.files?.[0];
+    if (f && /\.json$/i.test(f.name)) importFile(f);
+  });
+
+  document.getElementById("btn-export").addEventListener("click", async () => {
+    const res = await fetch("/api/topology/export");
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "topology.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  const historyPanel = document.getElementById("historypanel");
+  const historyList = document.getElementById("hp-list");
+
+  async function openHistory() {
+    historyPanel.classList.add("open");
+    historyList.innerHTML = "carregando…";
+    try {
+      const items = await api("/api/topology/history");
+      historyList.innerHTML = "";
+      if (!items.length) {
+        historyList.innerHTML = '<div class="lp-target">Nenhum backup ainda — cada importação gera um.</div>';
+        return;
+      }
+      for (const it of items) {
+        const row = document.createElement("div");
+        row.className = "hp-item";
+        row.innerHTML = `<span><b>${it.name}</b><br>${it.modified} · ${(it.size / 1024).toFixed(1)} KB</span>`;
+        const btn = document.createElement("button");
+        btn.textContent = "Restaurar";
+        btn.addEventListener("click", async () => {
+          try {
+            const data = await api(`/api/topology/restore/${encodeURIComponent(it.name)}`, { method: "POST" });
+            applyTopology(data);
+            historyPanel.classList.remove("open");
+            testPanel.classList.add("open");
+            tlog(`✓ Backup ${it.name} restaurado`, "t-ok");
+            refreshState();
+          } catch (err) {
+            alert("Falha ao restaurar: " + err.message);
+          }
+        });
+        row.appendChild(btn);
+        historyList.appendChild(row);
+      }
+    } catch (err) {
+      historyList.innerHTML = `<div class="lp-target">✗ ${err.message}</div>`;
+    }
+  }
+
+  document.getElementById("btn-history").addEventListener("click", openHistory);
+  document.getElementById("hp-close").addEventListener("click", () => historyPanel.classList.remove("open"));
+
+  // ---------------------------------------------------------------
+  // Boot
+  // ---------------------------------------------------------------
+  window.addEventListener("resize", layout);
+
+  (async () => {
+    try {
+      const data = await api("/api/topology");
+      applyTopology(data);
+      requestAnimationFrame(render);
+      refreshState();
+    } catch (err) {
+      document.body.insertAdjacentHTML("beforeend",
+        `<div style="position:fixed;inset:0;display:grid;place-items:center;font-family:var(--mono)">
+           Falha ao carregar a topologia do servidor: ${err.message}</div>`);
+    }
+  })();
+})();
+</script>
+</body>
+</html>
